@@ -4,8 +4,35 @@
 
     {{-- ================= HEADER ================= --}}
     <div class="card header-card">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+            <span style="background:#3b82f6; color:#fff; padding:4px 14px; border-radius:6px; font-size:13px; font-weight:700; letter-spacing:0.5px;">
+                👤 KARYAWAN DASHBOARD
+            </span>
+        </div>
         <h1>Hallo, {{ $user->name }}</h1>
-        <p>Ringkasan Absensi hari ini</p>
+        <p>Ringkasan Absensi hari ini — Jangan lupa scan wajah Anda!</p>
+    </div>
+
+    {{-- ================= ABSENSI CTA ================= --}}
+    <div class="card" style="background:linear-gradient(135deg, #4f46e5, #6366f1); color:#fff; margin-bottom:20px; border-radius:12px; padding:20px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+            <div>
+                <h3 style="margin:0 0 4px; font-size:18px; font-weight:700;">📸 Absensi Hari Ini</h3>
+                <p style="margin:0; font-size:14px; opacity:0.9;">
+                    @if(!$attendanceToday)
+                        ⚠️ Anda <strong>belum absen masuk</strong> hari ini.
+                    @elseif(!$attendanceToday->jam_keluar)
+                        ✅ Sudah absen masuk ({{ \Carbon\Carbon::parse($attendanceToday->jam_masuk)->format('H:i') }}). Belum absen pulang.
+                    @else
+                        ✅ Sudah selesai absen hari ini.
+                    @endif
+                </p>
+            </div>
+            <a href="{{ route('attendance.scan') }}"
+               style="background:#fff; color:#4f46e5; padding:10px 24px; border-radius:8px; font-weight:700; font-size:14px; text-decoration:none; white-space:nowrap;">
+                🎯 Lakukan Absensi
+            </a>
+        </div>
     </div>
 
     {{-- ================= GRID UTAMA ================= --}}

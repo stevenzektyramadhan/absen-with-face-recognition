@@ -17,6 +17,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EMBEDDING_DIR = os.path.join(BASE_DIR, "embeddings")
 MODEL_PATH = os.path.join(BASE_DIR, "yolov8n.pt")
 
+# Ensure embeddings directory exists
+os.makedirs(EMBEDDING_DIR, exist_ok=True)
+
 SIMILARITY_THRESHOLD = 0.5
 
 # =========================
@@ -132,6 +135,56 @@ def recognize_frame():
         "bbox": best_bbox
     })
 
+
+# =========================
+# ROUTE: REGISTER FACE
+# =========================
+@app.route("/register_face", methods=["POST"])
+def register_face():
+    print("📥 /register_face called")
+
+    # Validate inputs
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    name = request.form.get("name")
+    if not name:
+        return jsonify({"error": "No name provided"}), 400
+
+    # Decode the image
+    file = request.files["file"]
+    img_bytes = np.frombuffer(file.read(), np.uint8)
+    img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
+
+    if img is None:
+        return jsonify({"error": "Failed to decode image"}), 400
+
+    print(f"🖼️ Image shape: {img.shape}")
+
+    # Detect faces
+    faces = face_app.get(img)
+    print(f"🟣 Faces detected: {len(faces)}")
+
+    if len(faces) == 0:
+        return jsonify({"error": "No face detected"}), 400
+
+    if len(faces) > 1:
+        return jsonify({"error": "Multiple faces detected. One face only"}), 400
+
+    # Extract and save embedding
+    embedding = np.array(faces[0].embedding)
+    save_path = os.path.join(EMBEDDING_DIR, f"{name}.npy")
+    np.save(save_path, embedding)
+    print(f"💾 Embedding saved to {save_path} | shape: {embedding.shape}")
+
+    # Hot reload: update in-memory embeddings dict
+    embeddings[name] = embedding
+    print(f"✅ Embeddings updated in memory. Total: {len(embeddings)} → {list(embeddings.keys())}")
+
+    return jsonify({
+        "status": "success",
+        "message": f"Face registered for {name}"
+    })
 
 
 # =========================
