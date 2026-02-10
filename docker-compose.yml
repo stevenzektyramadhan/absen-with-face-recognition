@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  # =========================
+  # Laravel Application
+  # =========================
+  laravel-app:
+    build:
+      context: ./absensi-face
+      dockerfile: Dockerfile
+    container_name: laravel-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./absensi-face:/var/www
+      - /var/www/vendor
+      - /var/www/node_modules
+    ports:
+      - "8000:8000"
+      - "5173:5173"
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+    depends_on:
+      db:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    networks:
+      - app-network
+    command: >
+      sh -c "composer install --no-interaction &&
+             npm install &&
+             npm run build &&
+             php artisan migrate --force &&
+             php artisan serve --host=0.0.0.0 --port=8000"
+
+  # =========================
+  # Python AI Service (Face Recognition)
+  # =========================
+  ai-service:
+    build:
+      context: ./face_service_python
+      dockerfile: Dockerfile
+    container_name: ai-service
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./face_service_python:/app
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+    # Required for onnxruntime executable stack
+    security_opt:
+      - seccomp:unconfined
+    networks:
+      - app-network
+
+  # =========================
+  # MySQL Database
+  # =========================
+  db:
+    image: mysql:8.0
+    container_name: mysql-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: absensi_db
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ALLOW_EMPTY_PASSWORD: "no"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ppassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # =========================
+  # phpMyAdmin (Database Management)
+  # =========================
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - "8080:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+# =========================
+# Networks
+# =========================
+networks:
+  app-network:
+    driver: bridge
+
+# =========================
+# Volumes
+# =========================
+volumes:
+  mysql_data:
+    driver: local

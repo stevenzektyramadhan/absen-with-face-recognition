@@ -1,0 +1,31 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+
+# Environment
+.env
+
+# Build artifacts (for dev, we want to build fresh)
+/public/build/
+/public/hot
+
+# Logs
+*.log
+storage/logs/*
+
+# Cache
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
+
+# Testing
+/coverage/
+.phpunit.result.cache
